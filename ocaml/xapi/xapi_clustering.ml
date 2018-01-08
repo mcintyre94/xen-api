@@ -30,6 +30,22 @@ let with_clustering_lock f =
             f ())
          (fun () -> debug "Function execution finished; returned host-local clustering lock."))
 
+(** One of these cluster stacks should be configured and running *)
+let get_required_cluster_stacks ~__context ~sr_sm_type =
+  let sms_matching_sr_type =
+    Db.SM.get_records_where ~__context
+      ~expr:Db_filter_types.(Eq(Field "type", Literal sr_sm_type))
+  in
+  sms_matching_sr_type
+  |> List.map (fun (_sm_ref, sm_rec) -> sm_rec.API.sM_required_cluster_stack)
+  (* We assume that we only have one SM for each SR type, so this is only to satisfy type checking *)
+  |> List.flatten
+
+let with_clustering_lock_if_needed ~__context ~sr_sm_type f =
+  match get_required_cluster_stacks ~__context ~sr_sm_type with
+    | [] -> f ()
+    | required_cluster_stacks -> with_clustering_lock f
+
 (* Note we have to add type annotations to network/host here because they're only used in the context of
   Db.PIF.get_records_where, and they're just strings there *)
 let pif_of_host ~__context (network : API.ref_network) (host : API.ref_host) =
@@ -65,17 +81,6 @@ let assert_cluster_host_can_be_created ~__context ~host =
   if Db.Cluster_host.get_refs_where ~__context
       ~expr:Db_filter_types.(Eq(Literal (Ref.string_of host),Field "host")) <> [] then
     failwith "Cluster host cannot be created because it already exists"
-
-(** One of these cluster stacks should be configured and running *)
-let get_required_cluster_stacks ~__context ~sr_sm_type =
-  let sms_matching_sr_type =
-    Db.SM.get_records_where ~__context
-      ~expr:Db_filter_types.(Eq(Field "type", Literal sr_sm_type))
-  in
-  sms_matching_sr_type
-  |> List.map (fun (_sm_ref, sm_rec) -> sm_rec.API.sM_required_cluster_stack)
-  (* We assume that we only have one SM for each SR type, so this is only to satisfy type checking *)
-  |> List.flatten
 
 let find_cluster_host ~__context ~host =
   match Db.Cluster_host.get_refs_where ~__context

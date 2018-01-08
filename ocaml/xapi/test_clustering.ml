@@ -207,6 +207,29 @@ let test_assert_cluster_host_is_enabled_for_matching_sms =
   ; "test_assert_cluster_host_is_enabled_for_matching_sms_succeeds_if_no_cluster_host_exists_and_clustering_is_not_needed" >:: test_assert_cluster_host_is_enabled_for_matching_sms_succeeds_if_no_cluster_host_exists_and_clustering_is_not_needed
   ]
 
+
+(** Tests clustering lock is only taken if needed *)
+let test_clustering_lock_only_taken_if_needed = 
+  let test_clustering_lock_only_taken_if_needed_nested_calls () =
+    let __context = T.make_test_database () in
+    let _ = T.make_sm ~__context ~_type:"type_corosync" ~required_cluster_stack:["corosync"] () in
+    let _ = T.make_sm ~__context ~_type:"type_nocluster" ~required_cluster_stack:[] () in
+    Helpers.timebox 
+      ~timeout: 1.0 
+      ~otherwise: (fun () -> failwith "Unexpected deadlock when making nested calls to with_clustering_lock_if_needed")
+      (fun () -> 
+        Xapi_clustering.with_clustering_lock_if_needed ~__context ~sr_sm_type:"type_corosync" (fun () -> 
+          Xapi_clustering.with_clustering_lock_if_needed ~__context ~sr_sm_type:"type_nocluster" (fun () ->
+            ()        
+          )
+        )
+      )
+  in
+
+  let open OUnit in
+  "test_clustering_lock_only_taken_if_needed" >:::
+  [ "test_clustering_lock_only_taken_if_needed_nested_calls" >:: test_clustering_lock_only_taken_if_needed_nested_calls]
+
 let test =
   let open OUnit in
   "test_clustering" >:::
@@ -214,4 +237,5 @@ let test =
   ; test_find_cluster_host
   ; test_assert_cluster_host_enabled
   ; test_assert_cluster_host_is_enabled_for_matching_sms
+  ; test_clustering_lock_only_taken_if_needed
   ]
