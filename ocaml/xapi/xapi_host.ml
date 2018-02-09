@@ -743,7 +743,11 @@ let request_backup ~__context ~host ~generation ~force =
   if Pool_role.is_master () then begin
     debug "Requesting database backup on master: Using direct sync";
     let connections = Db_conn_store.read_db_connections () in
-    Db_cache_impl.sync connections (Db_ref.get_database (Db_backend.make ()))
+    Db_cache_impl.sync connections (Db_ref.get_database (Db_backend.make ()));
+    (* We want to fsync the database after the sync *)
+    List.iter (fun (conn:Parse_db_conf.db_connection) -> 
+      Unixext.fsync (Unix.openfile conn.path [Unix.O_WRONLY] 0o600))
+    connections 
   end else begin
     let master_address = Helpers.get_main_ip_address () in
     Pool_db_backup.fetch_database_backup ~master_address:master_address ~pool_secret:!Xapi_globs.pool_secret
