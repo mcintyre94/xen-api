@@ -316,9 +316,9 @@ let sync conns db =
 
 let flush_dirty dbconn = Db_connections.flush_dirty_and_maybe_exit dbconn None
 let flush_and_exit (dbconn:Parse_db_conf.db_connection) ret_code = 
-  info "Will fsync database before flush and exit";
-  Unixext.fsync (Unix.openfile (dbconn.path) [Unix.O_WRONLY] 0o600);
-  ignore (Db_connections.flush_dirty_and_maybe_exit dbconn (Some ret_code))
+  info "Will fsync database after flush and exit";
+  ignore (Db_connections.flush_dirty_and_maybe_exit dbconn (Some ret_code));
+  Unixext.fsync (Unix.openfile (dbconn.path) [Unix.O_WRONLY] 0o600)
 
 let spawn_db_flush_threads() =
   (* Spawn threads that flush cache to db connections at regular intervals *)
