@@ -12,6 +12,7 @@
  * GNU Lesser General Public License for more details.
  *)
 open Db_cache_types
+open Xapi_stdext_unix
 module R = Debug.Make(struct let name = "redo_log" end)
 module D = Debug.Make(struct let name = "database" end)
 
@@ -83,10 +84,18 @@ module To = struct
     database (Xmlm.make_output (`Channel oc)) db;
     flush oc
 
-  let file (filename: string) db : unit =
+  let file (filename: string) (db:Db_cache_types.Database.t) : unit =
     let fdescr = Unix.openfile filename [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o600 in
     Xapi_stdext_pervasives.Pervasiveext.finally
-      (fun () -> fd fdescr db)
+      (fun () -> 
+        fd fdescr db; 
+        if Database.fsync_enabled db then begin
+          D.debug "fsyncing database before close";
+          Unixext.fsync fdescr
+        end
+        else
+          D.debug "Not fsyncing database because fsync_enabled is false"
+      )
       (fun () -> Unix.close fdescr)
 end
 
