@@ -30,6 +30,8 @@ module W = Debug.Make(struct let name = "db_write" end)
 open Db_cache_types
 open Db_ref
 
+open Xapi_stdext_unix
+
 let fist_delay_read_records_where = ref false
 
 (* Only needed by the DB_ACCESS signature *)
@@ -313,8 +315,10 @@ let sync conns db =
   List.iter (fun c -> Db_connections.flush c db) conns
 
 let flush_dirty dbconn = Db_connections.flush_dirty_and_maybe_exit dbconn None
-let flush_and_exit dbconn ret_code = ignore (Db_connections.flush_dirty_and_maybe_exit dbconn (Some ret_code))
-
+let flush_and_exit (dbconn:Parse_db_conf.db_connection) ret_code = 
+  info "Will fsync database before flush and exit";
+  Unixext.fsync (Unix.openfile (dbconn.path) [Unix.O_WRONLY] 0o600);
+  ignore (Db_connections.flush_dirty_and_maybe_exit dbconn (Some ret_code))
 
 let spawn_db_flush_threads() =
   (* Spawn threads that flush cache to db connections at regular intervals *)
