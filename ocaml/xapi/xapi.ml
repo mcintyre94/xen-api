@@ -117,9 +117,8 @@ let start_database_engine () =
 
 let set_fsync_mode ~__context =
   let enabled =  Xapi_clustering.is_clustering_enabled_on_localhost ~__context in
-  let db_ref = Context.database_of __context in
-  let db = Db_ref.get_database db_ref in
-  Database.set_fsync db enabled
+  let dbconn = Db_connections.preferred_write_db () in
+  dbconn.fsync_enabled <- enabled
 
 (* Block premature incoming client requests until the database engine is ready *)
 let wait_until_database_is_ready_for_clients () =

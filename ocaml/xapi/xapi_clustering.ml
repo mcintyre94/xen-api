@@ -170,9 +170,8 @@ let is_clustering_enabled_on_localhost ~__context =
 
 let set_fsync_mode ~__context () =
   let enabled = is_clustering_enabled_on_localhost ~__context in
-  let db_ref = Context.database_of __context in
-  let db = Db_ref.get_database db_ref in
-  Database.set_fsync db enabled
+  let dbconn = Db_connections.preferred_write_db () in
+  dbconn.fsync_enabled <- enabled
 
 
 module Daemon = struct

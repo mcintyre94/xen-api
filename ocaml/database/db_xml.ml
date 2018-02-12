@@ -84,12 +84,14 @@ module To = struct
     database (Xmlm.make_output (`Channel oc)) db;
     flush oc
 
-  let file (filename: string) (db:Db_cache_types.Database.t) : unit =
+  (* Note: We'd prefer to generate fsync here by reading Db_connections,
+     but that causes a dependency cycle. So we must pass it in explicitly. *)
+  let file (filename: string) db fsync : unit =
     let fdescr = Unix.openfile filename [ Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC ] 0o600 in
     Xapi_stdext_pervasives.Pervasiveext.finally
       (fun () -> 
         fd fdescr db; 
-        if Database.fsync_enabled db then begin
+        if fsync then begin
           D.debug "fsyncing database before close";
           Unixext.fsync fdescr
         end

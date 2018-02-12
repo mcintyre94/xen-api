@@ -154,7 +154,10 @@ let restore_from_xml __context dry_run (xml_filename: string) =
   prepare_database_for_restore ~old_context:__context ~new_context;
   (* write manifest and unmarshalled db directly to db_temporary_restore_path, so its ready for us on restart *)
   if not(dry_run)
-  then Db_xml.To.file Xapi_globs.db_temporary_restore_path (Db_ref.get_database (Context.database_of new_context))
+  then begin
+    let dbconn = Db_connections.preferred_write_db () in
+    Db_xml.To.file Xapi_globs.db_temporary_restore_path (Db_ref.get_database (Context.database_of new_context)) dbconn.fsync_enabled
+  end
 
 (** Called when a CLI user downloads a backup of the database *)
 let pull_database_backup_handler (req: Http.Request.t) s _ =

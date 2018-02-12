@@ -129,8 +129,6 @@ sig
   val manifest : t -> Manifest.t
   val tableset : t -> TableSet.t
   val schema : t -> Schema.t
-  val fsync_enabled : t -> bool
-  val set_fsync : t -> bool -> unit
   val increment : t -> t
   val update : (TableSet.t -> TableSet.t) -> t -> t
   val set_generation : Generation.t -> t -> t

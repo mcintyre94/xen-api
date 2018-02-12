@@ -228,8 +228,7 @@ module Database = struct
     manifest : Manifest.t;
     schema:    Schema.t;
     keymap:    (string * string) KeyMap.t;
-    callbacks: (string * (update -> t -> unit)) list;
-    mutable fsync_enabled : bool
+    callbacks: (string * (update -> t -> unit)) list
   }
   let update_manifest f x =
     { x with manifest = f x.manifest }
@@ -241,11 +240,6 @@ module Database = struct
   let tableset x = x.tables
 
   let schema x = x.schema
-
-  let fsync_enabled x = x.fsync_enabled
-
-  let set_fsync x b =
-    x.fsync_enabled <- b
 
   let update f x =
     { x with tables = f x.tables }
@@ -343,7 +337,6 @@ module Database = struct
     schema    = schema;
     keymap    = KeyMap.empty;
     callbacks = [];
-    fsync_enabled = false;
   }
 end
 
