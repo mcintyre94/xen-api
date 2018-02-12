@@ -49,7 +49,7 @@ let populate schema dbconn =
 (* atomically flush entire db cache to disk. If we are given a cache then flush that, otherwise flush the
    current state of the global in-memory cache *)
 
-let flush dbconn db =
+let flush dbconn db fsync =
   let open Xapi_stdext_unix in
   let time = Unix.gettimeofday() in
 
@@ -61,12 +61,17 @@ let flush dbconn db =
          then Db_xml.To.fd fd db
          else
            Gzip.compress fd
-             (fun uncompressed -> Db_xml.To.fd uncompressed db)
+             (fun uncompressed -> Db_xml.To.fd uncompressed db);
+         if fsync then begin
+           D.debug "fsyncing database after flush";
+           Unixext.fsync fd
+         end
       ) in
 
   let do_flush_gen db filename =
     let generation = Manifest.generation (Database.manifest db) in
     Unixext.write_string_to_file filename (Generation.to_string generation) in
+    if fsync then D.debug "fsync is enable, in do_flush_gen";
 
   let filename = dbconn.Parse_db_conf.path in
   do_flush_xml db filename;
