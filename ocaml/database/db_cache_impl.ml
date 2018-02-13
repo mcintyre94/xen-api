@@ -313,7 +313,8 @@ let sync conns db =
   List.iter (fun c -> Db_connections.flush c db) conns
 
 let flush_dirty dbconn fsync = Db_connections.flush_dirty_and_maybe_exit dbconn None ~fsync
-let flush_and_exit dbconn ?(fsync=false) ret_code = ignore (Db_connections.flush_dirty_and_maybe_exit dbconn (Some ret_code) ~fsync)
+(* Always pass fsync=true from flush_and_exit *)
+let flush_and_exit dbconn ret_code = ignore (Db_connections.flush_dirty_and_maybe_exit dbconn (Some ret_code) ~fsync:true)
 
 
 let spawn_db_flush_threads() =

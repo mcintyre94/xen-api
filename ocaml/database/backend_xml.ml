@@ -50,6 +50,10 @@ let populate schema dbconn =
    current state of the global in-memory cache *)
 
 let flush ?(fsync=false) dbconn db =
+  if fsync then
+    D.debug "flush_dirty with fsync=true"
+  else 
+    D.debug "flush_dirty with fsync=false";
   let open Xapi_stdext_unix in
   let time = Unix.gettimeofday() in
 
@@ -58,14 +62,10 @@ let flush ?(fsync=false) dbconn db =
     Unixext.atomic_write_to_file filename 0o0644
       (fun fd ->
          if not dbconn.Parse_db_conf.compress
-         then Db_xml.To.fd fd db
+         then Db_xml.To.fd fd db ~fsync
          else
            Gzip.compress fd
-             (fun uncompressed -> Db_xml.To.fd uncompressed db);
-         if fsync then begin
-           D.debug "fsyncing database after flush";
-           Unixext.fsync fd
-         end
+             (fun uncompressed -> Db_xml.To.fd uncompressed db ~fsync);
       ) in
 
   let do_flush_gen db filename =
@@ -84,6 +84,10 @@ let flush ?(fsync=false) dbconn db =
 (* NB We don't do incremental flushing *)
 
 let flush_dirty ?(fsync=false) dbconn =
+  if fsync then
+    D.debug "flush_dirty with fsync=true"
+  else 
+    D.debug "flush_dirty with fsync=false";
   let db = Db_ref.get_database (Db_backend.make ()) in
   let g = Manifest.generation (Database.manifest db) in
   if g > dbconn.Parse_db_conf.last_generation_count then begin
