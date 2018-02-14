@@ -911,6 +911,30 @@ let update_non_vm_metadata ~__context ~rpc ~session_id =
 
   ()
 
+(* Prohibit parallel flushes since they're so expensive *)
+let sync_m = Mutex.create ()
+
+open Db_cache_types
+
+let sync_database ~__context =
+  Mutex.execute sync_m
+    (fun () ->
+       (* If HA is enabled I'll first try to flush to the LUN *)
+       let pool = Helpers.get_pool ~__context in
+       let flushed_to_vdi = Db.Pool.get_ha_enabled ~__context ~self:pool && (Db_lock.with_lock (fun () -> Xha_metadata_vdi.flush_database ~__context Xapi_ha.ha_redo_log)) in
+       if flushed_to_vdi
+       then debug "flushed database to metadata VDI: assuming this is sufficient."
+       else begin
+         debug "flushing database to all online nodes";
+         let generation = Db_lock.with_lock (fun () -> Manifest.generation (Database.manifest (Db_ref.get_database (Context.database_of __context)))) in
+         Threadext.thread_iter
+           (fun host ->
+              Helpers.call_api_functions ~__context
+                (fun rpc session_id -> Client.Host.request_backup rpc session_id host generation true))
+           (Db.Host.get_all ~__context)
+       end
+    )
+
 let assert_pooling_licensed ~__context =
   if (not (Pool_features.is_enabled ~__context Features.Pooling))
   then raise (Api_errors.Server_error(Api_errors.license_restriction, []))
@@ -999,6 +1023,7 @@ let join_common ~__context ~master_address ~master_username ~master_password ~fo
            Client.Host.update_master my_rpc my_session_id host master_address)
         (Db.Host.get_all_records ~__context));
   Xapi_hooks.pool_join_hook ~__context
+  
 
 let join ~__context ~master_address ~master_username ~master_password  =
   join_common ~__context ~master_address ~master_username ~master_password ~force:false
@@ -1246,29 +1271,6 @@ let eject ~__context ~host =
     Xapi_hooks.pool_eject_hook ~__context
   end
 
-(* Prohibit parallel flushes since they're so expensive *)
-let sync_m = Mutex.create ()
-
-open Db_cache_types
-
-let sync_database ~__context =
-  Mutex.execute sync_m
-    (fun () ->
-       (* If HA is enabled I'll first try to flush to the LUN *)
-       let pool = Helpers.get_pool ~__context in
-       let flushed_to_vdi = Db.Pool.get_ha_enabled ~__context ~self:pool && (Db_lock.with_lock (fun () -> Xha_metadata_vdi.flush_database ~__context Xapi_ha.ha_redo_log)) in
-       if flushed_to_vdi
-       then debug "flushed database to metadata VDI: assuming this is sufficient."
-       else begin
-         debug "flushing database to all online nodes";
-         let generation = Db_lock.with_lock (fun () -> Manifest.generation (Database.manifest (Db_ref.get_database (Context.database_of __context)))) in
-         Threadext.thread_iter
-           (fun host ->
-              Helpers.call_api_functions ~__context
-                (fun rpc session_id -> Client.Host.request_backup rpc session_id host generation true))
-           (Db.Host.get_all ~__context)
-       end
-    )
 
 (* This also means me, since call will have been forwarded from the current master *)
 let designate_new_master ~__context ~host =

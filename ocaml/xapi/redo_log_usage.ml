@@ -94,6 +94,7 @@ let read_from_redo_log log staging_path db_ref =
         Db_ref.update_database db_ref (Db_cache_types.Database.set_generation generation);
         let db = Db_ref.get_database db_ref in
         let dbconn = Db_connections.preferred_write_db () in
+        R.debug "redo_log_usage: fsync enabled = %B" dbconn.fsync_enabled;
         Db_xml.To.file staging_path db dbconn.fsync_enabled;
         Stdext.Unixext.write_string_to_file (staging_path ^ ".generation") (Generation.to_string generation)
     end

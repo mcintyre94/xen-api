@@ -156,6 +156,7 @@ let restore_from_xml __context dry_run (xml_filename: string) =
   if not(dry_run)
   then begin
     let dbconn = Db_connections.preferred_write_db () in
+    D.debug "db_backup.restore_from_xml: fsync enabled = %B" dbconn.fsync_enabled;
     Db_xml.To.file Xapi_globs.db_temporary_restore_path (Db_ref.get_database (Context.database_of new_context)) dbconn.fsync_enabled
   end
 

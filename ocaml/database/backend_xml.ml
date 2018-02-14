@@ -50,10 +50,7 @@ let populate schema dbconn =
    current state of the global in-memory cache *)
 
 let flush ?(fsync=false) dbconn db =
-  if fsync then
-    D.debug "flush_dirty with fsync=true"
-  else 
-    D.debug "flush_dirty with fsync=false";
+  D.debug "flush (backend_xml) with fsync=%B" fsync;
   let open Xapi_stdext_unix in
   let time = Unix.gettimeofday() in
 
@@ -84,10 +81,7 @@ let flush ?(fsync=false) dbconn db =
 (* NB We don't do incremental flushing *)
 
 let flush_dirty ?(fsync=false) dbconn =
-  if fsync then
-    D.debug "flush_dirty with fsync=true"
-  else 
-    D.debug "flush_dirty with fsync=false";
+    D.debug "flush_dirty (backend_xml) with fsync=%B" fsync;
   let db = Db_ref.get_database (Db_backend.make ()) in
   let g = Manifest.generation (Database.manifest db) in
   if g > dbconn.Parse_db_conf.last_generation_count then begin

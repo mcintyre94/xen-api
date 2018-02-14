@@ -171,6 +171,10 @@ let is_clustering_enabled_on_localhost ~__context =
 let set_fsync_mode ~__context () =
   let enabled = is_clustering_enabled_on_localhost ~__context in
   let dbconn = Db_connections.preferred_write_db () in
+  if enabled then
+    D.debug "set_fsync_mode (xapi_clustering) setting true"
+  else
+    D.debug "set_fsync_mode (xapi_clustering) setting false";
   dbconn.fsync_enabled <- enabled
 
 

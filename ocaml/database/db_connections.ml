@@ -91,7 +91,7 @@ let flush_dirty_and_maybe_exit dbconn ?(fsync=false) exit_spec =
          end;
 
        (* Just a periodic flush, no fsync *)
-       let was_anything_flushed = Backend_xml.flush_dirty dbconn in
+       let was_anything_flushed = Backend_xml.flush_dirty dbconn ~fsync in
 
        (* exit if we've been told to by caller *)
        begin
@@ -105,6 +105,7 @@ let flush_dirty_and_maybe_exit dbconn ?(fsync=false) exit_spec =
 let flush dbconn db =
   debug "About to flush database: %s" dbconn.Parse_db_conf.path;
   let fsync = dbconn.fsync_enabled in
+  debug "FLUSH: db_connections: fsync is %B" fsync;
   Db_conn_store.with_db_conn_lock dbconn
     (fun () ->
        Backend_xml.flush dbconn db ~fsync

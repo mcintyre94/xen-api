@@ -312,9 +312,14 @@ let sync conns db =
   (* and then to the filesystem *)
   List.iter (fun c -> Db_connections.flush c db) conns
 
-let flush_dirty dbconn fsync = Db_connections.flush_dirty_and_maybe_exit dbconn None ~fsync
+let flush_dirty dbconn fsync = 
+  D.debug "flush_dirty (db_cache_impl) with fsync=%B" fsync;
+  Db_connections.flush_dirty_and_maybe_exit dbconn None ~fsync
+
 (* Always pass fsync=true from flush_and_exit *)
-let flush_and_exit dbconn ret_code = ignore (Db_connections.flush_dirty_and_maybe_exit dbconn (Some ret_code) ~fsync:true)
+let flush_and_exit dbconn ret_code = 
+  D.debug "flush_and_exit (db_cache_impl) with fsync=true";
+  ignore (Db_connections.flush_dirty_and_maybe_exit dbconn (Some ret_code) ~fsync:true)
 
 
 let spawn_db_flush_threads() =
@@ -367,6 +372,7 @@ let spawn_db_flush_threads() =
                                    (* debug "[%s] considering flush" db_path; *)
                                    (* This is an exit flush, we should respect the fsync_enabled setting *)
                                    let fsync = dbconn.fsync_enabled in
+                                   D.debug "db_cache_impl.spawn...: fsync enabled? %B" fsync;
                                    let was_anything_flushed = Xapi_stdext_threads.Threadext.Mutex.execute Db_lock.global_flush_mutex (fun ()->flush_dirty dbconn fsync) in
                                    if was_anything_flushed then
                                      begin

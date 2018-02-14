@@ -64,6 +64,10 @@ let create_as_necessary ~__context ~host =
   | None -> ()
 
 let create ~__context ~cluster ~host =
+  (* Clustering is enabled, so fsync is enabled, sync the master DB *)
+  Helpers.call_api_functions ~__context 
+    (fun rpc session_id -> Client.Client.Pool.sync_database rpc session_id); (* This will also fsync *)
+
   (* TODO: take network lock *)
   with_clustering_lock (fun () ->
       assert_operation_host_target_is_localhost ~__context ~host;
