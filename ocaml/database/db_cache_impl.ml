@@ -370,10 +370,8 @@ let spawn_db_flush_threads() =
                                then
                                  begin
                                    (* debug "[%s] considering flush" db_path; *)
-                                   (* This is an exit flush, we should respect the fsync_enabled setting *)
-                                   let fsync = dbconn.fsync_enabled in
-                                   D.debug "db_cache_impl.spawn...: fsync enabled? %B" fsync;
-                                   let was_anything_flushed = Xapi_stdext_threads.Threadext.Mutex.execute Db_lock.global_flush_mutex (fun ()->flush_dirty dbconn fsync) in
+                                   D.debug "db_cache_impl.spawn...: calling flush_dirty with fsync=false";
+                                   let was_anything_flushed = Xapi_stdext_threads.Threadext.Mutex.execute Db_lock.global_flush_mutex (fun ()->flush_dirty dbconn false) in
                                    if was_anything_flushed then
                                      begin
                                        my_writes_this_period := !my_writes_this_period + 1;

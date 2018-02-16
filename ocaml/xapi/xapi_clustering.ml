@@ -168,8 +168,7 @@ let is_clustering_enabled_on_localhost ~__context =
   let host = Helpers.get_localhost ~__context in
   not (is_clustering_disabled_on_host ~__context host)
 
-let set_fsync_mode ~__context () =
-  let enabled = is_clustering_enabled_on_localhost ~__context in
+let set_fsync_mode ~__context enabled =
   let dbconn = Db_connections.preferred_write_db () in
   if enabled then
     D.debug "set_fsync_mode (xapi_clustering) setting true"
@@ -189,14 +188,16 @@ module Daemon = struct
     debug "Enabling and starting the clustering daemon";
     maybe_call_script ~__context "/usr/bin/systemctl" [ "enable"; service ];
     maybe_call_script ~__context "/usr/bin/systemctl" [ "start"; service ];
-    set_fsync_mode ~__context ();
+    debug "fsync: about to set fsync mode after enable (xapi_clustering.ml)";
+    set_fsync_mode ~__context true;
     debug "Cluster daemon: enabled & started"
 
   let disable ~__context =
     debug "Disabling and stopping the clustering daemon";
     maybe_call_script ~__context "/usr/bin/systemctl" [ "disable"; service ];
     maybe_call_script ~__context "/usr/bin/systemctl" [ "stop"; service ];
-    set_fsync_mode ~__context ();
+    debug "fsync: about to set fsync mode after disable (xapi_clustering.ml)";
+    set_fsync_mode ~__context false;
     debug "Cluster daemon: disabled & stopped"
 end
 
